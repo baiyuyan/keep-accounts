@@ -1,0 +1,1471 @@
+<!doctype html>
+
+<html lang="zh-CN">
+
+<head>
+
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+
+  <title>自定义周期记账预算（本地版）</title>
+
+  <style>
+
+    :root{
+
+      --bg:#0b1220; --card:#121a2b; --text:#e8edf6; --muted:#9aa7bd;
+
+      --pri:#4f8cff; --good:#21c07a; --bad:#ff5d5d; --line:#22304b;
+
+      --radius:14px;
+
+    }
+
+    *{box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,Roboto,Arial;}
+
+    body{margin:0; background:linear-gradient(180deg,#071021 0%, #0b1220 50%, #070e1a 100%); color:var(--text);}
+
+    .wrap{max-width:900px; margin:0 auto; padding:16px 14px 28px;}
+
+    h1{font-size:18px; margin:8px 0 14px;}
+
+    .topbar{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;}
+
+    .grid{display:grid; grid-template-columns:1fr; gap:12px;}
+
+    .card{background:rgba(18,26,43,.92); border:1px solid rgba(34,48,75,.6); border-radius:var(--radius); padding:14px;}
+
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+
+    .col{flex:1; min-width:140px;}
+
+    label{font-size:12px; color:var(--muted); display:block; margin-bottom:6px;}
+
+    input, select, textarea{
+
+      width:100%; padding:10px 10px; border-radius:12px; border:1px solid rgba(34,48,75,.9);
+
+      background:#0d1526; color:var(--text); outline:none;
+
+    }
+
+    input:focus,select:focus,textarea:focus{border-color:rgba(79,140,255,.9); box-shadow:0 0 0 3px rgba(79,140,255,.15);}
+
+    .btn{
+
+      border:0; border-radius:12px; padding:10px 12px; font-weight:700;
+
+      background:var(--pri); color:white; cursor:pointer;
+
+    }
+
+    .btn.secondary{background:#1b2a45; color:var(--text); border:1px solid rgba(34,48,75,.9);}
+
+    .btn.danger{background:rgba(255,93,93,.14); color:#ffd2d2; border:1px solid rgba(255,93,93,.35);}
+
+    .btn.small{padding:8px 10px; border-radius:10px; font-weight:700;}
+
+    .btn:active{transform:translateY(1px);}
+
+    .hint{font-size:12px; color:var(--muted); line-height:1.4;}
+
+    .pill{display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(34,48,75,.9); background:#0d1526; color:var(--muted);}
+
+    .kpi{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}
+
+    .kpi .box{padding:12px; border-radius:12px; background:#0d1526; border:1px solid rgba(34,48,75,.9);}
+
+    .kpi .num{font-size:18px; font-weight:900; margin-top:6px;}
+
+    .good{color:var(--good);} .bad{color:var(--bad);}
+
+    .progress{height:10px; border-radius:999px; background:#0d1526; border:1px solid rgba(34,48,75,.9); overflow:hidden; margin-top:10px;}
+
+    .bar{height:100%; width:0%; background:linear-gradient(90deg,var(--good), var(--pri));}
+
+    .list{margin-top:10px;}
+
+    .item{
+
+      display:flex; justify-content:space-between; gap:10px; padding:10px; border-radius:12px;
+
+      background:#0d1526; border:1px solid rgba(34,48,75,.9); margin-top:8px;
+
+    }
+
+    .item .left{min-width:0; flex:1;}
+
+    .item .title{font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+    .item .sub{font-size:12px; color:var(--muted); margin-top:4px;}
+
+    .item .amt{font-weight:900; white-space:nowrap;}
+
+    .split{height:1px; background:rgba(34,48,75,.8); margin:12px 0;}
+
+    .table{width:100%; border-collapse:collapse; margin-top:10px;}
+
+    .table th,.table td{border-bottom:1px solid rgba(34,48,75,.65); padding:10px 6px; text-align:left; font-size:13px;}
+
+    .table th{color:var(--muted); font-weight:700;}
+
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+
+    .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+
+    .tab{padding:8px 10px; border-radius:999px; background:#0d1526; border:1px solid rgba(34,48,75,.9); color:var(--muted); cursor:pointer; user-select:none; font-weight:700; font-size:13px;}
+
+    .tab.active{background:rgba(79,140,255,.18); color:var(--text); border-color:rgba(79,140,255,.6);}
+
+    .rightTools{display:flex; gap:8px; align-items:center;}
+
+  </style>
+
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <div class="topbar">
+
+    <h1>自定义周期记账预算（本地版）</h1>
+
+    <div class="row" style="align-items:center; gap:8px;">
+
+      <button class="btn secondary" id="btnExport">导出</button>
+
+      <button class="btn secondary" id="btnImport">导入</button>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="grid">
+
+    <!-- 周期管理 -->
+
+    <div class="card">
+
+      <div class="row" style="justify-content:space-between; align-items:center;">
+
+        <div>
+
+          <div style="font-weight:900;">1）创建预算周期</div>
+
+          <div class="hint">周期允许重叠；自动匹配会优先选择开始日期更晚的周期。</div>
+
+        </div>
+
+        <span class="pill" id="activeInfo">当前查看：-</span>
+
+      </div>
+
+
+
+      <div class="row" style="margin-top:12px;">
+
+        <div class="col">
+
+          <label>周期名称（可选）</label>
+
+          <input id="pName" placeholder="例如：一月预算 / 旅游预算" />
+
+        </div>
+
+        <div class="col">
+
+          <label>开始日期</label>
+
+          <input id="pStart" type="date" />
+
+        </div>
+
+        <div class="col">
+
+          <label>结束日期</label>
+
+          <input id="pEnd" type="date" />
+
+        </div>
+
+        <div class="col">
+
+          <label>预算金额（元）</label>
+
+          <input id="pBudget" inputmode="decimal" placeholder="例如 2000" />
+
+        </div>
+
+        <div style="min-width:140px;">
+
+          <label>&nbsp;</label>
+
+          <button class="btn" id="btnAddPeriod" style="width:100%;">创建周期</button>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="split"></div>
+
+
+
+      <div class="row">
+
+        <div class="col">
+
+          <label>选择查看</label>
+
+          <select id="periodSelect"></select>
+
+        </div>
+
+        <div style="min-width:140px;">
+
+          <label>&nbsp;</label>
+
+          <button class="btn secondary" id="btnDeletePeriod" style="width:100%;">删除该周期</button>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="tabs">
+
+        <div class="tab active" id="tabPeriod">查看：周期</div>
+
+        <div class="tab" id="tabUnassigned">查看：未归档</div>
+
+      </div>
+
+
+
+      <div class="kpi" id="kpiWrap">
+
+        <div class="box">
+
+          <div class="hint">该周期预算</div>
+
+          <div class="num" id="kpiBudget">0.00</div>
+
+        </div>
+
+        <div class="box">
+
+          <div class="hint">已花 / 剩余</div>
+
+          <div class="num" id="kpiSpendRemain">0.00 / 0.00</div>
+
+        </div>
+
+      </div>
+
+      <div class="progress" id="progressWrap"><div class="bar" id="bar"></div></div>
+
+      <div class="hint" id="kpiTip" style="margin-top:8px;">-</div>
+
+    </div>
+
+
+
+    <!-- 记一笔 -->
+
+    <div class="card">
+
+      <div style="font-weight:900;">2）记一笔支出</div>
+
+      <div class="row" style="margin-top:12px;">
+
+        <div class="col" style="min-width:200px;">
+
+          <label>用途</label>
+
+          <input id="inTitle" placeholder="例如：午饭 / 打车 / 网购" />
+
+        </div>
+
+        <div class="col">
+
+          <label>金额（元）</label>
+
+          <input id="inAmount" inputmode="decimal" placeholder="例如 25.5" />
+
+        </div>
+
+        <div class="col">
+
+          <label>日期</label>
+
+          <input id="inDate" type="date" />
+
+        </div>
+
+        <div class="col">
+
+          <label>分类</label>
+
+          <select id="inCategory"></select>
+
+        </div>
+
+        <div class="col">
+
+          <label>归属周期（默认自动）</label>
+
+          <select id="inPeriod">
+
+            <option value="auto">自动匹配（不命中→未归档）</option>
+
+          </select>
+
+        </div>
+
+        <div style="min-width:140px;">
+
+          <label>&nbsp;</label>
+
+          <button class="btn" id="btnAddRecord" style="width:100%;">添加</button>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="row" style="margin-top:12px;">
+
+        <div class="col">
+
+          <label>新增分类（可选）</label>
+
+          <input id="newCat" placeholder="例如：宠物 / 人情" />
+
+        </div>
+
+        <div style="min-width:140px;">
+
+          <label>&nbsp;</label>
+
+          <button class="btn secondary" id="btnAddCat" style="width:100%;">添加分类</button>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="hint" style="margin-top:10px;">
+
+        若账单日期不在任何周期内，会进入“未归档”，你可以之后再归档到某个周期。
+
+      </div>
+
+    </div>
+
+
+
+    <!-- 明细 -->
+
+    <div class="card">
+
+      <div class="row" style="justify-content:space-between; align-items:center;">
+
+        <div>
+
+          <div style="font-weight:900;">3）明细</div>
+
+          <div class="hint">“周期”页：显示所选周期内的记录；“未归档”页：显示未归档记录。</div>
+
+        </div>
+
+        <div class="rightTools">
+
+          <button class="btn danger" id="btnClearCurrent">清空当前列表</button>
+
+        </div>
+
+      </div>
+
+
+
+      <div id="summaryByCat" style="margin-top:10px;"></div>
+
+      <div class="list" id="list"></div>
+
+      <div class="hint" id="empty" style="margin-top:10px; display:none;">暂无记录</div>
+
+    </div>
+
+
+
+    <!-- 数据管理 -->
+
+    <div class="card">
+
+      <div style="font-weight:900;">4）数据管理</div>
+
+      <div class="row" style="margin-top:10px;">
+
+        <button class="btn danger" id="btnResetAll">重置全部数据</button>
+
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+
+        数据仅保存在本机浏览器 localStorage，换浏览器/清缓存会丢失，建议定期导出。
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<script>
+
+  const LS_KEY = "custom_period_budget_book_v2";
+
+  const DEFAULT_CATS = ["餐饮","交通","购物","住房","娱乐","医疗","学习","其他"];
+
+
+
+  function todayISO(){
+
+    const d = new Date();
+
+    const yyyy = d.getFullYear();
+
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+
+    const dd = String(d.getDate()).padStart(2,"0");
+
+    return `${yyyy}-${mm}-${dd}`;
+
+  }
+
+  function parseMoney(s){
+
+    if (typeof s !== "string") s = String(s ?? "");
+
+    s = s.replace(/,/g,"").trim();
+
+    if (!s) return NaN;
+
+    const n = Number(s);
+
+    return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+
+  }
+
+  function fmtMoney(n){ n = Number(n||0); return n.toFixed(2); }
+
+  function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+
+
+
+  function loadState(){
+
+    try{
+
+      const raw = localStorage.getItem(LS_KEY);
+
+      if(!raw){
+
+        return { categories: DEFAULT_CATS.slice(), periods: [], records: [], activePeriodId: null, viewMode: "period" };
+
+      }
+
+      const s = JSON.parse(raw);
+
+      if(!s || typeof s !== "object") throw new Error("bad");
+
+      s.categories ||= DEFAULT_CATS.slice();
+
+      s.periods ||= [];
+
+      s.records ||= [];
+
+      s.activePeriodId ||= null;
+
+      s.viewMode ||= "period";
+
+      if(!Array.isArray(s.categories) || !Array.isArray(s.periods) || !Array.isArray(s.records)) throw new Error("bad");
+
+      if(s.categories.length === 0) s.categories = DEFAULT_CATS.slice();
+
+      if(s.viewMode !== "period" && s.viewMode !== "unassigned") s.viewMode = "period";
+
+      return s;
+
+    }catch(e){
+
+      return { categories: DEFAULT_CATS.slice(), periods: [], records: [], activePeriodId: null, viewMode: "period" };
+
+    }
+
+  }
+
+  function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+
+
+  function dateToTime(iso){
+
+    const d = new Date(iso + "T00:00:00");
+
+    d.setHours(0,0,0,0);
+
+    return d.getTime();
+
+  }
+
+  function inRange(dateISO, startISO, endISO){
+
+    const t = dateToTime(dateISO);
+
+    return t >= dateToTime(startISO) && t <= dateToTime(endISO);
+
+  }
+
+  function sortPeriods(a,b){
+
+    const as = dateToTime(a.start), bs = dateToTime(b.start);
+
+    if (as !== bs) return bs - as;
+
+    return dateToTime(b.end) - dateToTime(a.end);
+
+  }
+
+  function periodLabel(p){
+
+    const name = (p.name || "").trim();
+
+    const range = `${p.start} ~ ${p.end}`;
+
+    return name ? `${name}（${range}）` : range;
+
+  }
+
+  function getActivePeriod(){
+
+    if (!state.activePeriodId) return null;
+
+    return state.periods.find(p => p.id === state.activePeriodId) || null;
+
+  }
+
+  function pickPeriodByDate(dateISO){
+
+    const hits = state.periods
+
+      .filter(p => inRange(dateISO, p.start, p.end))
+
+      .sort((a,b)=> dateToTime(b.start) - dateToTime(a.start));
+
+    return hits[0] || null;
+
+  }
+
+
+
+  function recordsOfPeriod(periodId){ return state.records.filter(r => r.periodId === periodId); }
+
+  function unassignedRecords(){ return state.records.filter(r => r.periodId == null); }
+
+
+
+  function sumAmount(recs){
+
+    return Math.round(recs.reduce((a,r)=>a + Number(r.amount||0), 0) * 100) / 100;
+
+  }
+
+  function groupByCategory(recs){
+
+    const m = new Map();
+
+    for(const r of recs){
+
+      const k = r.category || "其他";
+
+      m.set(k, (m.get(k) || 0) + Number(r.amount||0));
+
+    }
+
+    const arr = Array.from(m.entries()).map(([cat,amt])=>({cat, amt: Math.round(amt*100)/100}));
+
+    arr.sort((a,b)=>b.amt-a.amt);
+
+    return arr;
+
+  }
+
+  function escapeHTML(s){
+
+    return String(s ?? "")
+
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+  }
+
+
+
+  function renderSelectors(){
+
+    // periodSelect
+
+    const sel = document.getElementById("periodSelect");
+
+    sel.innerHTML = "";
+
+    const periodsSorted = state.periods.slice().sort(sortPeriods);
+
+
+
+    if (periodsSorted.length === 0){
+
+      const opt = document.createElement("option");
+
+      opt.value = "";
+
+      opt.textContent = "暂无周期（可先记到未归档）";
+
+      sel.appendChild(opt);
+
+      state.activePeriodId = null;
+
+    } else {
+
+      for(const p of periodsSorted){
+
+        const opt = document.createElement("option");
+
+        opt.value = p.id;
+
+        opt.textContent = periodLabel(p);
+
+        sel.appendChild(opt);
+
+      }
+
+      if (!state.activePeriodId || !state.periods.some(p=>p.id===state.activePeriodId)){
+
+        state.activePeriodId = periodsSorted[0].id;
+
+      }
+
+      sel.value = state.activePeriodId;
+
+    }
+
+
+
+    // inPeriod
+
+    const inP = document.getElementById("inPeriod");
+
+    const prev = inP.value;
+
+    inP.innerHTML = "";
+
+    const autoOpt = document.createElement("option");
+
+    autoOpt.value = "auto";
+
+    autoOpt.textContent = "自动匹配（不命中→未归档）";
+
+    inP.appendChild(autoOpt);
+
+    for(const p of periodsSorted){
+
+      const opt = document.createElement("option");
+
+      opt.value = p.id;
+
+      opt.textContent = periodLabel(p);
+
+      inP.appendChild(opt);
+
+    }
+
+    inP.value = (prev && Array.from(inP.options).some(o=>o.value===prev)) ? prev : "auto";
+
+
+
+    // categories
+
+    const catSel = document.getElementById("inCategory");
+
+    catSel.innerHTML = "";
+
+    for(const c of state.categories){
+
+      const opt = document.createElement("option");
+
+      opt.value = c;
+
+      opt.textContent = c;
+
+      catSel.appendChild(opt);
+
+    }
+
+  }
+
+
+
+  function renderTabs(){
+
+    const t1 = document.getElementById("tabPeriod");
+
+    const t2 = document.getElementById("tabUnassigned");
+
+    t1.classList.toggle("active", state.viewMode === "period");
+
+    t2.classList.toggle("active", state.viewMode === "unassigned");
+
+  }
+
+
+
+  function renderTopInfo(){
+
+    const info = document.getElementById("activeInfo");
+
+    const kpiWrap = document.getElementById("kpiWrap");
+
+    const progressWrap = document.getElementById("progressWrap");
+
+
+
+    if(state.viewMode === "unassigned"){
+
+      info.textContent = `当前查看：未归档（${unassignedRecords().length} 条）`;
+
+      kpiWrap.style.display = "none";
+
+      progressWrap.style.display = "none";
+
+      document.getElementById("kpiTip").textContent = "未归档记录不参与任何周期预算统计。你可以在列表中选择归档到某个周期。";
+
+      return;
+
+    }
+
+
+
+    kpiWrap.style.display = "";
+
+    progressWrap.style.display = "";
+
+
+
+    const p = getActivePeriod();
+
+    if(!p){
+
+      info.textContent = "当前查看：周期（未选择）";
+
+      document.getElementById("kpiBudget").textContent = "0.00";
+
+      document.getElementById("kpiSpendRemain").textContent = "0.00 / 0.00";
+
+      document.getElementById("bar").style.width = "0%";
+
+      document.getElementById("kpiTip").textContent = "请先创建并选择一个周期。";
+
+      return;
+
+    }
+
+
+
+    info.textContent = `当前查看：${periodLabel(p)}`;
+
+    const recs = recordsOfPeriod(p.id);
+
+    const spent = sumAmount(recs);
+
+    const budget = Number(p.budget || 0);
+
+    const remain = Math.round((budget - spent)*100)/100;
+
+
+
+    document.getElementById("kpiBudget").textContent = fmtMoney(budget);
+
+    document.getElementById("kpiSpendRemain").innerHTML =
+
+      `<span class="${budget>0 && spent>budget ? 'bad':''}">${fmtMoney(spent)}</span> / `+
+
+      `<span class="${remain>=0 ? 'good':'bad'}">${fmtMoney(remain)}</span>`;
+
+
+
+    let pct = 0;
+
+    if (budget > 0) pct = Math.min(100, Math.max(0, spent / budget * 100));
+
+    document.getElementById("bar").style.width = pct + "%";
+
+
+
+    document.getElementById("kpiTip").textContent =
+
+      `周期：${p.start} ~ ${p.end}。` +
+
+      (budget>0 ? (remain>=0 ? ` 还剩 ${fmtMoney(remain)} 元。` : ` 已超支 ${fmtMoney(Math.abs(remain))} 元。`) : " 该周期未设置预算金额。");
+
+  }
+
+
+
+  function renderList(){
+
+    const list = document.getElementById("list");
+
+    const empty = document.getElementById("empty");
+
+    const summary = document.getElementById("summaryByCat");
+
+    list.innerHTML = "";
+
+    summary.innerHTML = "";
+
+
+
+    let recs = [];
+
+    if(state.viewMode === "unassigned"){
+
+      recs = unassignedRecords();
+
+    }else{
+
+      const p = getActivePeriod();
+
+      recs = p ? recordsOfPeriod(p.id) : [];
+
+    }
+
+
+
+    recs = recs.slice().sort((a,b)=>{
+
+      const d = dateToTime(b.date) - dateToTime(a.date);
+
+      if (d !== 0) return d;
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+    });
+
+
+
+    empty.style.display = recs.length ? "none" : "block";
+
+
+
+    // 分类汇总（未归档也给你汇总，方便看）
+
+    if(recs.length){
+
+      const byCat = groupByCategory(recs);
+
+      const rows = byCat.map(x=>`<tr><td>${escapeHTML(x.cat)}</td><td><b>${fmtMoney(x.amt)}</b></td></tr>`).join("");
+
+      summary.innerHTML = `
+
+        <div style="font-weight:800; margin-top:4px;">分类汇总（当前列表）</div>
+
+        <table class="table">
+
+          <thead><tr><th>分类</th><th>金额（元）</th></tr></thead>
+
+          <tbody>${rows}</tbody>
+
+        </table>
+
+      `;
+
+    }
+
+
+
+    const periodsSorted = state.periods.slice().sort(sortPeriods);
+
+
+
+    recs.forEach(r=>{
+
+      const div = document.createElement("div");
+
+      div.className = "item";
+
+
+
+      const left = document.createElement("div");
+
+      left.className = "left";
+
+      const title = document.createElement("div");
+
+      title.className = "title";
+
+      title.textContent = r.title || "未命名";
+
+      const sub = document.createElement("div");
+
+      sub.className = "sub";
+
+
+
+      const p = r.periodId ? state.periods.find(x=>x.id===r.periodId) : null;
+
+      sub.textContent = `${r.date} · ${r.category || "其他"} · ${p ? ("已归档：" + periodLabel(p)) : "未归档"}`;
+
+      left.appendChild(title);
+
+      left.appendChild(sub);
+
+
+
+      const right = document.createElement("div");
+
+      right.style.display="flex";
+
+      right.style.alignItems="center";
+
+      right.style.gap="8px";
+
+      right.style.flexWrap="wrap";
+
+      right.style.justifyContent="flex-end";
+
+
+
+      const amt = document.createElement("div");
+
+      amt.className = "amt";
+
+      amt.textContent = `- ${fmtMoney(r.amount)}`;
+
+
+
+      // 未归档时，提供归档下拉
+
+      if(state.viewMode === "unassigned"){
+
+        const sel = document.createElement("select");
+
+        sel.style.minWidth = "220px";
+
+        const ph = document.createElement("option");
+
+        ph.value = "";
+
+        ph.textContent = "归档到…";
+
+        sel.appendChild(ph);
+
+        for(const pp of periodsSorted){
+
+          const opt = document.createElement("option");
+
+          opt.value = pp.id;
+
+          opt.textContent = periodLabel(pp);
+
+          sel.appendChild(opt);
+
+        }
+
+        sel.onchange = ()=>{
+
+          const pid = sel.value;
+
+          if(!pid) return;
+
+          r.periodId = pid;
+
+          state.activePeriodId = pid; // 归档后切到该周期看更直观
+
+          state.viewMode = "period";
+
+          saveState();
+
+          render();
+
+        };
+
+        right.appendChild(sel);
+
+      }
+
+
+
+      const del = document.createElement("button");
+
+      del.className = "btn secondary small";
+
+      del.textContent = "删";
+
+      del.onclick = ()=>{
+
+        state.records = state.records.filter(x=>x.id !== r.id);
+
+        saveState();
+
+        render();
+
+      };
+
+
+
+      right.appendChild(amt);
+
+      right.appendChild(del);
+
+
+
+      div.appendChild(left);
+
+      div.appendChild(right);
+
+      list.appendChild(div);
+
+    });
+
+  }
+
+
+
+  function render(){
+
+    renderSelectors();
+
+    renderTabs();
+
+    renderTopInfo();
+
+    renderList();
+
+    saveState();
+
+  }
+
+
+
+  // init
+
+  let state = loadState();
+
+  document.getElementById("inDate").value = todayISO();
+
+
+
+  // 预填当月
+
+  (function initDefaultPeriodDates(){
+
+    const now = new Date();
+
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+
+    const toISO = d => {
+
+      const yyyy = d.getFullYear();
+
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+
+      const dd = String(d.getDate()).padStart(2,"0");
+
+      return `${yyyy}-${mm}-${dd}`;
+
+    };
+
+    document.getElementById("pStart").value = toISO(start);
+
+    document.getElementById("pEnd").value = toISO(end);
+
+  })();
+
+
+
+  // tab events
+
+  document.getElementById("tabPeriod").addEventListener("click", ()=>{
+
+    state.viewMode = "period";
+
+    render();
+
+  });
+
+  document.getElementById("tabUnassigned").addEventListener("click", ()=>{
+
+    state.viewMode = "unassigned";
+
+    render();
+
+  });
+
+
+
+  // period create
+
+  document.getElementById("btnAddPeriod").addEventListener("click", ()=>{
+
+    const name = document.getElementById("pName").value.trim();
+
+    const start = document.getElementById("pStart").value;
+
+    const end = document.getElementById("pEnd").value;
+
+    const budget = parseMoney(document.getElementById("pBudget").value);
+
+
+
+    if(!start || !end){ alert("请选择开始/结束日期"); return; }
+
+    if(dateToTime(start) > dateToTime(end)){ alert("开始日期不能晚于结束日期"); return; }
+
+    if(!Number.isFinite(budget) || budget < 0){ alert("请输入有效预算金额（>=0）"); return; }
+
+
+
+    // 允许重叠，但提示
+
+    const overlap = state.periods.some(p => !(dateToTime(end) < dateToTime(p.start) || dateToTime(start) > dateToTime(p.end)));
+
+    if (overlap){
+
+      if(!confirm("该周期与已有周期存在日期重叠。继续创建吗？")) return;
+
+    }
+
+
+
+    const p = { id: uid(), name, start, end, budget: Math.round(budget*100)/100, createdAt: new Date().toISOString() };
+
+    state.periods.push(p);
+
+    state.activePeriodId = p.id;
+
+    state.viewMode = "period";
+
+
+
+    document.getElementById("pBudget").value = "";
+
+    document.getElementById("pName").value = "";
+
+    saveState();
+
+    render();
+
+  });
+
+
+
+  // select period
+
+  document.getElementById("periodSelect").addEventListener("change", (e)=>{
+
+    const id = e.target.value;
+
+    if(!id) return;
+
+    state.activePeriodId = id;
+
+    state.viewMode = "period";
+
+    saveState();
+
+    render();
+
+  });
+
+
+
+  // delete period
+
+  document.getElementById("btnDeletePeriod").addEventListener("click", ()=>{
+
+    const p = getActivePeriod();
+
+    if(!p){ alert("暂无可删除的周期"); return; }
+
+    const recs = recordsOfPeriod(p.id);
+
+    if(!confirm(`确定删除该周期吗？\n${periodLabel(p)}\n将同时删除该周期下的 ${recs.length} 条记录。`)) return;
+
+
+
+    state.records = state.records.filter(r => r.periodId !== p.id);
+
+    state.periods = state.periods.filter(x => x.id !== p.id);
+
+    state.activePeriodId = state.periods.length ? state.periods.slice().sort(sortPeriods)[0].id : null;
+
+    saveState();
+
+    render();
+
+  });
+
+
+
+  // add category
+
+  document.getElementById("btnAddCat").addEventListener("click", ()=>{
+
+    const c = document.getElementById("newCat").value.trim();
+
+    if(!c) return;
+
+    if(state.categories.includes(c)){ alert("该分类已存在"); return; }
+
+    state.categories.push(c);
+
+    document.getElementById("newCat").value = "";
+
+    saveState();
+
+    renderSelectors();
+
+  });
+
+
+
+  // add record
+
+  document.getElementById("btnAddRecord").addEventListener("click", ()=>{
+
+    const title = document.getElementById("inTitle").value.trim();
+
+    const amount = parseMoney(document.getElementById("inAmount").value);
+
+    const date = document.getElementById("inDate").value;
+
+    const category = document.getElementById("inCategory").value;
+
+    const periodChoice = document.getElementById("inPeriod").value;
+
+
+
+    if(!date){ alert("请选择日期"); return; }
+
+    if(!Number.isFinite(amount) || amount <= 0){ alert("请输入有效金额（>0）"); return; }
+
+
+
+    let periodId = null;
+
+    if(periodChoice === "auto"){
+
+      const p = pickPeriodByDate(date);
+
+      periodId = p ? p.id : null; // 不命中→未归档
+
+    }else{
+
+      const p = state.periods.find(p=>p.id===periodChoice) || null;
+
+      if(!p){ alert("所选周期不存在，请重新选择"); return; }
+
+      periodId = p.id;
+
+    }
+
+
+
+    state.records.push({
+
+      id: uid(),
+
+      title: title || "未命名",
+
+      amount: Math.round(amount*100)/100,
+
+      date,
+
+      category: category || "其他",
+
+      periodId,
+
+      createdAt: new Date().toISOString()
+
+    });
+
+
+
+    // 添加后跳转：有 periodId → 周期；否则 → 未归档
+
+    if(periodId){
+
+      state.activePeriodId = periodId;
+
+      state.viewMode = "period";
+
+    }else{
+
+      state.viewMode = "unassigned";
+
+    }
+
+
+
+    document.getElementById("inTitle").value = "";
+
+    document.getElementById("inAmount").value = "";
+
+    saveState();
+
+    render();
+
+  });
+
+
+
+  // clear current list
+
+  document.getElementById("btnClearCurrent").addEventListener("click", ()=>{
+
+    if(state.viewMode === "unassigned"){
+
+      const recs = unassignedRecords();
+
+      if(!recs.length){ alert("未归档暂无记录"); return; }
+
+      if(!confirm(`确定清空未归档记录吗？（共 ${recs.length} 条）不可撤销。`)) return;
+
+      state.records = state.records.filter(r => r.periodId != null);
+
+      saveState();
+
+      render();
+
+      return;
+
+    }
+
+
+
+    const p = getActivePeriod();
+
+    if(!p){ alert("请先选择一个周期"); return; }
+
+    const recs = recordsOfPeriod(p.id);
+
+    if(!recs.length){ alert("该周期暂无记录"); return; }
+
+    if(!confirm(`确定清空该周期全部记录吗？（共 ${recs.length} 条）不可撤销。`)) return;
+
+    state.records = state.records.filter(r => r.periodId !== p.id);
+
+    saveState();
+
+    render();
+
+  });
+
+
+
+  // reset all
+
+  document.getElementById("btnResetAll").addEventListener("click", ()=>{
+
+    if(!confirm("确定重置全部数据吗？周期、记录、分类都会删除。")) return;
+
+    state = { categories: DEFAULT_CATS.slice(), periods: [], records: [], activePeriodId: null, viewMode: "period" };
+
+    saveState();
+
+    render();
+
+  });
+
+
+
+  // export/import
+
+  document.getElementById("btnExport").addEventListener("click", async ()=>{
+
+    const text = JSON.stringify(state, null, 2);
+
+    try{
+
+      await navigator.clipboard.writeText(text);
+
+      alert("已导出并复制到剪贴板（JSON）。建议粘贴到备忘录/邮箱保存。");
+
+    }catch(e){
+
+      prompt("复制以下内容保存（JSON）：", text);
+
+    }
+
+  });
+
+
+
+  document.getElementById("btnImport").addEventListener("click", ()=>{
+
+    const text = prompt("粘贴导出的 JSON 内容：");
+
+    if(!text) return;
+
+    try{
+
+      const obj = JSON.parse(text);
+
+      if(!obj || typeof obj !== "object") throw new Error("bad");
+
+      if(!Array.isArray(obj.periods) || !Array.isArray(obj.records) || !Array.isArray(obj.categories)) throw new Error("bad");
+
+      obj.viewMode ||= "period";
+
+      state = obj;
+
+      if(state.categories.length===0) state.categories = DEFAULT_CATS.slice();
+
+      saveState();
+
+      render();
+
+      alert("导入成功");
+
+    }catch(e){
+
+      alert("导入失败：JSON 格式不正确");
+
+    }
+
+  });
+
+
+
+  render();
+
+</script>
+
+</body>
+
+</html>
